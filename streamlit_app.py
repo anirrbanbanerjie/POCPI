@@ -18,7 +18,11 @@ st.title("🐾 Pet Claims Analyzer")
 
 with st.sidebar:
     st.header("🔐 User Access")
-    role = st.selectbox("Select Role", ["adjuster", "supervisor", "admin"])
+    role = st.sidebar.selectbox(
+    "Select Role",
+    ["adjuster", "supervisor", "admin"],
+    key="role_select"
+)
 
     st.header("📤 Upload Claims File")
     uploaded = st.file_uploader("Upload claims CSV", type="csv")
