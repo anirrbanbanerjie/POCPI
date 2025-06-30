@@ -1,117 +1,111 @@
-{
- "cells": [
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "id": "eecc5c02-312c-481f-83db-d6303e48eeda",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "# streamlit_app.py\n",
-    "import streamlit as st\n",
-    "import pandas as pd\n",
-    "from detector import detect_anomalies\n",
-    "from db import init_db, log_decision\n",
-    "import altair as alt\n",
-    "import seaborn as sns\n",
-    "import matplotlib.pyplot as plt\n",
-    "\n",
-    "st.set_page_config(layout=\"wide\")\n",
-    "init_db()\n",
-    "\n",
-    "st.title(\"🐾 Pet Claims Analyzer\")\n",
-    "\n",
-    "# Role selection\n",
-    "role = st.sidebar.selectbox(\"Select Role\", [\"adjuster\", \"supervisor\", \"admin\"])\n",
-    "\n",
-    "# Upload\n",
-    "if role in [\"adjuster\", \"admin\"]:\n",
-    "    uploaded = st.sidebar.file_uploader(\"Upload claims CSV\", type=\"csv\")\n",
-    "\n",
-    "if 'claims_df' not in st.session_state and uploaded:\n",
-    "    df = pd.read_csv(uploaded, parse_dates=['claim_date'])\n",
-    "    st.session_state.claims_df = detect_anomalies(df)\n",
-    "\n",
-    "df = st.session_state.get('claims_df', pd.DataFrame())\n",
-    "\n",
-    "# Tabs based on role\n",
-    "tabs = {\"adjuster\": [\"Claims\", \"Manual Review\"], \"supervisor\": [\"Manual Review\", \"Analytics\"], \"admin\": [\"Claims\", \"Manual Review\", \"Analytics\"]}\n",
-    "selected_tabs = tabs[role]\n",
-    "tab_objs = st.tabs(selected_tabs)\n",
-    "\n",
-    "# Tab 1: Claims\n",
-    "if \"Claims\" in selected_tabs:\n",
-    "    with tab_objs[selected_tabs.index(\"Claims\")]:\n",
-    "        st.subheader(\"All Processed Claims\")\n",
-    "        st.dataframe(df)\n",
-    "\n",
-    "# Tab 2: Manual Review\n",
-    "if \"Manual Review\" in selected_tabs:\n",
-    "    with tab_objs[selected_tabs.index(\"Manual Review\")]:\n",
-    "        st.subheader(\"Flagged Claims Review\")\n",
-    "        queue = df[df['status'] == 'flagged_for_review']\n",
-    "        for i, row in queue.iterrows():\n",
-    "            col1, col2 = st.columns([4, 2])\n",
-    "            with col1:\n",
-    "                st.write(f\"**{row['pet_id']} | {row['procedure']} | ${row['cost']}**\")\n",
-    "                st.write(f\"Reason: {row['flag_reason']} | ML: {row['ml_flag']}\")\n",
-    "            with col2:\n",
-    "                choice = st.selectbox(\"Decision\", [\"Keep flagged\", \"Approve\", \"Mark as Fraud\"], key=f\"decision_{i}\")\n",
-    "                if choice == \"Approve\":\n",
-    "                    df.at[i, 'status'] = 'approved'\n",
-    "                    log_decision(claim_id=row['pet_id'], decision='approved', role=role)\n",
-    "                elif choice == \"Mark as Fraud\":\n",
-    "                    df.at[i, 'status'] = 'fraud'\n",
-    "                    log_decision(claim_id=row['pet_id'], decision='fraud', role=role)\n",
-    "\n",
-    "# Tab 3: Analytics\n",
-    "if \"Analytics\" in selected_tabs:\n",
-    "    with tab_objs[selected_tabs.index(\"Analytics\")]:\n",
-    "        st.subheader(\"Analytics Dashboard\")\n",
-    "\n",
-    "        # Volume over time\n",
-    "        df['claim_month'] = df['claim_date'].dt.to_period('M').dt.to_timestamp()\n",
-    "        volume = df.groupby('claim_month').size().reset_index(name='count')\n",
-    "        flagged = df[df['status']=='flagged_for_review'].groupby('claim_month').size().reset_index(name='flagged')\n",
-    "        merged = volume.merge(flagged, on='claim_month', how='left').fillna(0)\n",
-    "        merged['pct_flagged'] = merged['flagged'] / merged['count'] * 100\n",
-    "\n",
-    "        c1, c2 = st.columns(2)\n",
-    "        with c1:\n",
-    "            st.altair_chart(alt.Chart(volume).mark_line().encode(x='claim_month', y='count'), use_container_width=True)\n",
-    "        with c2:\n",
-    "            st.altair_chart(alt.Chart(merged).mark_line(color='red').encode(x='claim_month', y='pct_flagged'), use_container_width=True)\n",
-    "\n",
-    "        # Heatmap\n",
-    "        st.subheader(\"Heatmap: Breed vs. Procedure\")\n",
-    "        heat = df.groupby(['breed', 'procedure']).size().reset_index(name='count')\n",
-    "        pivot = heat.pivot(index='breed', columns='procedure', values='count').fillna(0)\n",
-    "\n",
-    "        fig, ax = plt.subplots(figsize=(12, 10))\n",
-    "        sns.heatmap(pivot, cmap=\"YlOrBr\", linewidths=0.5)\n",
-    "        st.pyplot(fig)"
-   ]
-  }
- ],
- "metadata": {
-  "kernelspec": {
-   "display_name": "Python 3 (ipykernel)",
-   "language": "python",
-   "name": "python3"
-  },
-  "language_info": {
-   "codemirror_mode": {
-    "name": "ipython",
-    "version": 3
-   },
-   "file_extension": ".py",
-   "mimetype": "text/x-python",
-   "name": "python",
-   "nbconvert_exporter": "python",
-   "pygments_lexer": "ipython3",
-   "version": "3.12.4"
-  }
- },
- "nbformat": 4,
- "nbformat_minor": 5
-}
+# streamlit_app.py
+import streamlit as st
+import pandas as pd
+from detector import detect_anomalies
+from db import init_db, log_decision
+import altair as alt
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+st.set_page_config(layout="wide")
+init_db()
+
+st.title("🐾 Pet Claims Analyzer")
+
+# ============================
+# Sidebar
+# ============================
+
+with st.sidebar:
+    st.header("🔐 User Access")
+    role = st.selectbox("Select Role", ["adjuster", "supervisor", "admin"])
+
+    st.header("📤 Upload Claims File")
+    uploaded = st.file_uploader("Upload claims CSV", type="csv")
+
+# ============================
+# Load & Process Data
+# ============================
+
+if uploaded:
+    try:
+        df = pd.read_csv(uploaded, parse_dates=['claim_date'], na_values=['null', 'None'])
+        df.dropna(subset=['pet_id', 'customer_id', 'provider', 'procedure', 'cost', 'claim_date', 'breed'], inplace=True)
+        df = detect_anomalies(df)
+        st.session_state.claims_df = df
+    except Exception as e:
+        st.error(f"Failed to read and process file: {e}")
+        st.stop()
+else:
+    st.warning("Please upload a CSV file to begin.")
+    st.stop()
+
+# Role selection
+role = st.sidebar.selectbox("Select Role", ["adjuster", "supervisor", "admin"])
+
+# Upload
+if role in ["adjuster", "admin"]:
+    uploaded = st.sidebar.file_uploader("Upload claims CSV", type="csv")
+
+if 'claims_df' not in st.session_state and uploaded:
+    df = pd.read_csv(uploaded, parse_dates=['claim_date'])
+    st.session_state.claims_df = detect_anomalies(df)
+
+df = st.session_state.get('claims_df', pd.DataFrame())
+
+# Tabs based on role
+tabs = {"adjuster": ["Claims", "Manual Review"], "supervisor": ["Manual Review", "Analytics"], "admin": ["Claims", "Manual Review", "Analytics"]}
+selected_tabs = tabs[role]
+tab_objs = st.tabs(selected_tabs)
+
+# Tab 1: Claims
+if "Claims" in selected_tabs:
+    with tab_objs[selected_tabs.index("Claims")]:
+        st.subheader("All Processed Claims")
+        st.dataframe(df)
+
+# Tab 2: Manual Review
+if "Manual Review" in selected_tabs:
+    with tab_objs[selected_tabs.index("Manual Review")]:
+        st.subheader("Flagged Claims Review")
+        queue = df[df['status'] == 'flagged_for_review']
+        for i, row in queue.iterrows():
+            col1, col2 = st.columns([4, 2])
+            with col1:
+                st.write(f"**{row['pet_id']} | {row['procedure']} | ${row['cost']}**")
+                st.write(f"Reason: {row['flag_reason']} | ML: {row['ml_flag']}")
+            with col2:
+                choice = st.selectbox("Decision", ["Keep flagged", "Approve", "Mark as Fraud"], key=f"decision_{i}")
+                if choice == "Approve":
+                    df.at[i, 'status'] = 'approved'
+                    log_decision(claim_id=row['pet_id'], decision='approved', role=role)
+                elif choice == "Mark as Fraud":
+                    df.at[i, 'status'] = 'fraud'
+                    log_decision(claim_id=row['pet_id'], decision='fraud', role=role)
+
+# Tab 3: Analytics
+if "Analytics" in selected_tabs:
+    with tab_objs[selected_tabs.index("Analytics")]:
+        st.subheader("Analytics Dashboard")
+
+        # Volume over time
+        df['claim_month'] = df['claim_date'].dt.to_period('M').dt.to_timestamp()
+        volume = df.groupby('claim_month').size().reset_index(name='count')
+        flagged = df[df['status']=='flagged_for_review'].groupby('claim_month').size().reset_index(name='flagged')
+        merged = volume.merge(flagged, on='claim_month', how='left').fillna(0)
+        merged['pct_flagged'] = merged['flagged'] / merged['count'] * 100
+
+        c1, c2 = st.columns(2)
+        with c1:
+            st.altair_chart(alt.Chart(volume).mark_line().encode(x='claim_month', y='count'), use_container_width=True)
+        with c2:
+            st.altair_chart(alt.Chart(merged).mark_line(color='red').encode(x='claim_month', y='pct_flagged'), use_container_width=True)
+
+        # Heatmap
+        st.subheader("Heatmap: Breed vs. Procedure")
+        heat = df.groupby(['breed', 'procedure']).size().reset_index(name='count')
+        pivot = heat.pivot(index='breed', columns='procedure', values='count').fillna(0)
+
+        fig, ax = plt.subplots(figsize=(12, 10))
+        sns.heatmap(pivot, cmap="YlOrBr", linewidths=0.5)
+        st.pyplot(fig)

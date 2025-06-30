@@ -1,0 +1,19 @@
+﻿pet_id,customer_id,provider,breed,procedure,cost,claim_date
+P001,C001,Vetco,terrier-boston,Dental cleaning,75,1/15/25
+P002,C002,Vetco,hound-plott,Emergency surgery (ACL),500,2/1/25
+P003,C003,HappyVet,poodle,Routine visit,100,2/10/25
+P004,C004,Banfield,terrier-boston,Vaccine,75,3/1/25
+P005,C005,Vetco,Goldendoodle,Dental cleaning,120,4/1/25
+P006,C006,Banfield,terrier-boston,Emergency surgery (ACL),700,4/10/25
+P007,C007,VCA,hound-plott,Routine visit,75,4/11/25
+P008,C007,VCA,poodle,Vaccine,500,4/12/25
+P009,C001,Vetco,terrier-boston,Dental cleaning,100,4/13/25
+P010,C010,Vetco,Goldendoodle,Emergency surgery (ACL),75,4/14/25
+P011,C011,Vetco,terrier-boston,Routine visit,120,4/15/25
+P012,C012,HappyVet,hound-plott,Vaccine,700,4/16/25
+P013,C005,Banfield,poodle,Dental cleaning,75,4/17/25
+P014,C014,Vetco,terrier-boston,Emergency surgery (ACL),500,4/18/25
+P015,C015,Banfield,Goldendoodle,Routine visit,100,4/19/25
+P016,C016,VCA,terrier-boston,Vaccine,75,4/20/25
+P017,C017,VCA,hound-plott,Dental cleaning,120,4/21/25
+P018,C018,Vetco,poodle,Emergency surgery (ACL),700,4/22/25
