@@ -67,21 +67,48 @@ if "Claims" in selected_tabs:
 # Tab 2: Manual Review
 if "Manual Review" in selected_tabs:
     with tab_objs[selected_tabs.index("Manual Review")]:
-        st.subheader("Flagged Claims Review")
+        st.subheader("🧐 Flagged Claims Review")
         queue = df[df['status'] == 'flagged_for_review']
-        for i, row in queue.iterrows():
-            col1, col2 = st.columns([4, 2])
-            with col1:
-                st.write(f"**{row['pet_id']} | {row['procedure']} | ${row['cost']}**")
-                st.write(f"Reason: {row['flag_reason']} | ML: {row['ml_flag']}")
-            with col2:
-                choice = st.selectbox("Decision", ["Keep flagged", "Approve", "Mark as Fraud"], key=f"decision_{i}")
-                if choice == "Approve":
-                    df.at[i, 'status'] = 'approved'
-                    log_decision(claim_id=row['pet_id'], decision='approved', role=role)
-                elif choice == "Mark as Fraud":
-                    df.at[i, 'status'] = 'fraud'
-                    log_decision(claim_id=row['pet_id'], decision='fraud', role=role)
+
+        if queue.empty:
+            st.success("✅ No flagged claims to review.")
+        else:
+            for i, row in queue.iterrows():
+                with st.container():
+                    col1, col2 = st.columns([4, 2])
+
+                    with col1:
+                        st.markdown(f"""
+                            **Pet ID:** {row['pet_id']}  
+                            **Customer ID:** {row['customer_id']}  
+                            **Breed:** {row['breed']}  
+                            **Procedure:** {row['procedure']}  
+                            **Cost:** ${row['cost']}  
+                            **Provider:** {row['provider']}  
+                            **Claim Date:** {row['claim_date'].date()}  
+                            **Reason:** {row['flag_reason']}  
+                            **ML Flag:** {row['ml_flag']}  
+                        """)
+
+                    with col2:
+                        decision_key = f"decision_{i}_{row['pet_id']}"
+                        decision = st.selectbox(
+                            "Decision",
+                            ["Keep flagged", "Approve", "Mark as Fraud"],
+                            key=decision_key
+                        )
+
+                        if st.button("Submit Decision", key=f"submit_{i}_{row['pet_id']}"):
+                            if decision == "Approve":
+                                df.at[i, 'status'] = 'approved'
+                                log_decision(claim_id=row['pet_id'], decision='approved', role=role)
+                                st.success("Approved.")
+                            elif decision == "Mark as Fraud":
+                                df.at[i, 'status'] = 'fraud'
+                                log_decision(claim_id=row['pet_id'], decision='fraud', role=role)
+                                st.warning("Marked as fraud.")
+                            else:
+                                st.info("Kept flagged.")
 
 # Tab 3: Analytics
 if "Analytics" in selected_tabs:
