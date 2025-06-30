@@ -49,7 +49,7 @@ role = st.sidebar.selectbox("Select Role", ["adjuster", "supervisor", "admin"])
 
 # Upload
 if role in ["adjuster", "admin"]:
-    uploaded = st.sidebar.file_uploader("Upload claims CSV", type="csv")
+   uploaded = st.sidebar.file_uploader("Upload claims CSV", type="csv", key="claims_uploader")
 
 if 'claims_df' not in st.session_state and uploaded:
     df = pd.read_csv(uploaded, parse_dates=['claim_date'])
